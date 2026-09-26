@@ -1,3 +1,4 @@
+import base64
 import html
 import re
 from urllib.parse import unquote
@@ -16,14 +17,11 @@ def _clean(value: str) -> str:
     return value.rstrip("),;]}\\").strip()
 
 
-def extract_links(text: str) -> list[str]:
-    if not text:
-        return []
-
-    candidates = (text, html.unescape(text), text.replace("\\/", "/"))
+def _extract_direct(text: str) -> list[str]:
     found: list[str] = []
     seen: set[str] = set()
 
+    candidates = (text, html.unescape(text), text.replace("\\/", "/"))
     for candidate in candidates:
         for match in URL_RE.finditer(candidate):
             value = _clean(match.group("url"))
@@ -33,3 +31,37 @@ def extract_links(text: str) -> list[str]:
                 found.append(value)
 
     return found
+
+
+def _decode_subscription(text: str) -> str | None:
+    compact = re.sub(r"\s+", "", text)
+    if len(compact) < 16 or len(compact) > 10_000_000:
+        return None
+    if not re.fullmatch(r"[A-Za-z0-9+/=_-]+", compact):
+        return None
+
+    padded = compact + "=" * (-len(compact) % 4)
+    for decoder in (base64.b64decode, base64.urlsafe_b64decode):
+        try:
+            decoded = decoder(padded.encode("ascii"))
+            result = decoded.decode("utf-8", errors="strict")
+            if "://" in result:
+                return result
+        except Exception:
+            continue
+    return None
+
+
+def extract_links(text: str) -> list[str]:
+    if not text:
+        return []
+
+    found = _extract_direct(text)
+    if found:
+        return found
+
+    decoded = _decode_subscription(text)
+    if decoded:
+        return _extract_direct(decoded)
+
+    return []
