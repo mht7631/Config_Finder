@@ -1,7 +1,24 @@
-# Optional public web-search queries.
-# One query per line.
-# Examples:
-# "vless://" public configs
-# "vmess://" public configs
-# "trojan://" public configs
-# "ss://" public configs
+# Public web-search queries. The desktop application runs these automatically.
+"vless://" public config
+"vmess://" public config
+"trojan://" public config
+"ss://" public config
+"shadowsocks://" public config
+"vless://" "vmess://" config
+"vless://" "trojan://" config
+"vmess://" "trojan://" config
+"vless://" subscription
+"vmess://" subscription
+"trojan://" subscription
+"ss://" subscription
+"vless://" site:github.com
+"vmess://" site:github.com
+"trojan://" site:github.com
+"ss://" site:github.com
+"vless://" site:raw.githubusercontent.com
+"vmess://" site:raw.githubusercontent.com
+"trojan://" site:raw.githubusercontent.com
+"ss://" site:raw.githubusercontent.com
+"v2ray configs" public github
+"free v2ray configs" public github
+"public proxy configs" github vless vmess
