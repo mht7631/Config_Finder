@@ -1,2 +1,6 @@
 # Public HTTP/HTTPS source pages.
-# One URL per line.
+# Seeded from publicly documented subscription/config lists; discovery can add more.
+https://raw.githubusercontent.com/Epodonios/v2ray-configs/main/All_Configs_Sub.txt
+https://raw.githubusercontent.com/ebrasha/free-v2ray-public-list/refs/heads/main/all_extracted_configs.txt
+https://raw.githubusercontent.com/morpheusadam/v2ray-config/main/subs/bundles/best.txt
+https://raw.githubusercontent.com/Baarcuda/vpn-configs/master/top100.txt
