@@ -17,9 +17,20 @@ CREATE TABLE IF NOT EXISTS configs (
     latency_ms REAL,
     error TEXT
 );
+CREATE TABLE IF NOT EXISTS test_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    config_id INTEGER NOT NULL,
+    tested_at TEXT NOT NULL,
+    status TEXT NOT NULL,
+    latency_ms REAL,
+    error TEXT,
+    FOREIGN KEY(config_id) REFERENCES configs(id) ON DELETE CASCADE
+);
 CREATE INDEX IF NOT EXISTS idx_configs_scheme ON configs(scheme);
 CREATE INDEX IF NOT EXISTS idx_configs_host ON configs(host);
 CREATE INDEX IF NOT EXISTS idx_configs_status ON configs(tcp_status);
+CREATE INDEX IF NOT EXISTS idx_history_config ON test_history(config_id);
+CREATE INDEX IF NOT EXISTS idx_history_tested_at ON test_history(tested_at);
 """
 
 
@@ -29,6 +40,7 @@ class Database:
         self.conn = sqlite3.connect(path)
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.execute("PRAGMA busy_timeout=5000")
+        self.conn.execute("PRAGMA foreign_keys=ON")
         self.conn.executescript(SCHEMA)
         self.conn.commit()
 
@@ -52,12 +64,68 @@ class Database:
         )
         self.conn.commit()
 
-    def update_test(self, link: str, status: str, latency_ms: float | None, error: str | None) -> None:
+    def update_test(
+        self,
+        link: str,
+        status: str,
+        latency_ms: float | None,
+        error: str | None,
+        tested_at: str | None = None,
+    ) -> None:
+        from .models import utc_now
+
+        timestamp = tested_at or utc_now()
+        row = self.conn.execute(
+            "SELECT id FROM configs WHERE link=?",
+            (link,),
+        ).fetchone()
+        if not row:
+            return
+
+        config_id = row[0]
         self.conn.execute(
-            "UPDATE configs SET tcp_status=?, latency_ms=?, error=? WHERE link=?",
-            (status, latency_ms, error, link),
+            "UPDATE configs SET tcp_status=?, latency_ms=?, error=? WHERE id=?",
+            (status, latency_ms, error, config_id),
+        )
+        self.conn.execute(
+            """
+            INSERT INTO test_history
+            (config_id, tested_at, status, latency_ms, error)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (config_id, timestamp, status, latency_ms, error),
         )
         self.conn.commit()
+
+    def history_summary(self, link: str) -> dict[str, float | int | None]:
+        row = self.conn.execute(
+            """
+            SELECT
+                COUNT(*),
+                COALESCE(SUM(CASE WHEN status='reachable' THEN 1 ELSE 0 END), 0),
+                AVG(CASE WHEN status='reachable' THEN latency_ms END),
+                MIN(CASE WHEN status='reachable' THEN latency_ms END),
+                MAX(CASE WHEN status='reachable' THEN latency_ms END)
+            FROM test_history h
+            JOIN configs c ON c.id = h.config_id
+            WHERE c.link=?
+            """,
+            (link,),
+        ).fetchone()
+        total, successes, avg_latency, min_latency, max_latency = row
+        return {
+            "tests": int(total or 0),
+            "successes": int(successes or 0),
+            "success_rate": (successes / total * 100.0) if total else None,
+            "avg_latency_ms": round(avg_latency, 2) if avg_latency is not None else None,
+            "min_latency_ms": round(min_latency, 2) if min_latency is not None else None,
+            "max_latency_ms": round(max_latency, 2) if max_latency is not None else None,
+        }
+
+    def history_summaries(self, links: list[str]) -> dict[str, dict]:
+        if not links:
+            return {}
+        return {link: self.history_summary(link) for link in links}
 
     def all(self) -> list[Config]:
         rows = self.conn.execute(
