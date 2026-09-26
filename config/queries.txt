@@ -1,0 +1,7 @@
+# Optional public web-search queries.
+# One query per line.
+# Examples:
+# "vless://" public configs
+# "vmess://" public configs
+# "trojan://" public configs
+# "ss://" public configs
