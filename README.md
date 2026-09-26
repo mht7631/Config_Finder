@@ -23,6 +23,10 @@ A window opens with Start Full Scan. Press that button and the application autom
 - data/reachable.txt
 - data/unreachable.txt
 - data/summary.json
+- data/top100.txt — highest-scoring reachable configurations
+- data/fastest.txt — fastest reachable endpoints
+- data/configs.jsonl — structured configuration records
+- data/<protocol>_reachable.txt — reachable configs per protocol
 - data/configs.db
 
 ## Requirements
@@ -50,7 +54,7 @@ You do not need to use the CLI.
 
 ## Discovery and scale
 
-Discovery uses multiple focused public search queries plus seeded public source lists. Crawling is asynchronous and bounded by concurrency, response size and timeout. The query list can be expanded without changing the application code.
+Discovery uses focused public search queries plus seeded public source lists. Crawling is asynchronous, bounded by concurrency, response size, timeout, page count and link count, and can follow one bounded same-host recursion layer. The desktop pipeline reports live progress and supports stopping between bounded batches.
 
 ## Important interpretation
 
