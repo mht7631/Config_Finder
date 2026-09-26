@@ -16,15 +16,17 @@ class SearchResult:
 class DuckDuckGoProvider:
     endpoint = "https://html.duckduckgo.com/html/?q={query}"
 
-    def __init__(self, timeout: int = 20):
+    def __init__(self, timeout: int = 20, concurrency: int = 3, delay: float = 0.8):
         self.timeout = aiohttp.ClientTimeout(total=timeout)
+        self.concurrency = max(1, concurrency)
+        self.delay = max(0.0, delay)
 
     async def search_one(self, session: aiohttp.ClientSession, query: str) -> SearchResult:
         try:
             url = self.endpoint.format(query=quote_plus(query))
             async with session.get(
                 url,
-                headers={"User-Agent": "Config-Finder/0.1 (+public-search-discovery)"},
+                headers={"User-Agent": "Config-Finder/0.2 (+public-search-discovery)"},
             ) as response:
                 response.raise_for_status()
                 text = await response.text(errors="replace")
@@ -41,11 +43,20 @@ class DuckDuckGoProvider:
         except Exception as exc:
             return SearchResult(query, [], f"{type(exc).__name__}: {exc}")
 
-    async def search(self, queries: list[str]) -> list[SearchResult]:
-        connector = aiohttp.TCPConnector(limit=4, ssl=True)
-        async with aiohttp.ClientSession(timeout=self.timeout, connector=connector) as session:
-            results = []
+    async def search(self, queries, progress=None, should_stop=None) -> list[SearchResult]:
+        connector = aiohttp.TCPConnector(limit=self.concurrency, ssl=True)
+        async with aiohttp.ClientSession(
+            timeout=self.timeout,
+            connector=connector,
+        ) as session:
+            results: list[SearchResult] = []
             for query in queries:
-                results.append(await self.search_one(session, query))
-                await asyncio.sleep(1.0)
+                if should_stop and should_stop():
+                    break
+                result = await self.search_one(session, query)
+                results.append(result)
+                if progress:
+                    progress(result)
+                if self.delay:
+                    await asyncio.sleep(self.delay)
             return results
