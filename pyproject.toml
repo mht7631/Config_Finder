@@ -12,6 +12,9 @@ dependencies = [
   "beautifulsoup4>=4.12,<5",
 ]
 
+[project.optional-dependencies]
+test = ["pytest>=8,<9"]
+
 [project.scripts]
 config-finder = "config_finder.cli:main"
 
