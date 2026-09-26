@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "config-finder"
+version = "0.1.0"
+description = "Public-source proxy configuration collector and endpoint tester"
+requires-python = ">=3.11"
+dependencies = [
+  "aiohttp>=3.9,<4",
+  "beautifulsoup4>=4.12,<5",
+]
+
+[project.scripts]
+config-finder = "config_finder.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["config_finder*"]
