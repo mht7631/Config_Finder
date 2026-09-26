@@ -1,98 +1,67 @@
 # Config Finder
 
-Config Finder is a local Python CLI for discovering publicly exposed proxy configuration links from public sources, normalizing them, storing them in SQLite, checking advertised TCP endpoints, ranking reachable endpoints by latency, and exporting datasets.
+Config Finder is a Windows-friendly Python application for discovering publicly exposed proxy configuration links from public sources, normalizing them, storing them in SQLite, checking advertised TCP endpoints, ranking reachable endpoints, and exporting clean datasets.
 
-## Supported protocols
+## Run it without the CLI
 
-- VLESS
-- VMess
-- Trojan
-- Shadowsocks / SS
+The normal user interface is the desktop application.
 
-## Pipeline
+~~~powershell
+py run.py
+~~~
 
-Public search → source discovery → bounded crawler → extraction → protocol parsing → deduplication → SQLite → TCP endpoint test → ranking → export
-
-TCP reachability is only an endpoint check. It does not prove that a proxy configuration is valid, authenticated, or usable through a real client.
-
-## Requirements
-
-- Python 3.11+
-- Internet access
-
-## Install
-
-```powershell
-py -m venv .venv
-.\\.venv\\Scripts\\Activate.ps1
-python -m pip install -U pip
-pip install -e ".[test]"
-```
-
-## Configure discovery
-
-Put public HTTP/HTTPS pages in `config/sources.txt`, one URL per line.
-
-Put public search queries in `config/queries.txt`, one query per line.
-
-Example queries:
-
-```text
-"vless://" public configs
-"vmess://" public configs
-"trojan://" public configs
-"ss://" public configs
-```
-
-## Commands
-
-```powershell
-python -m config_finder discover
-python -m config_finder crawl
-python -m config_finder test --limit 500
-python -m config_finder top --limit 50
-python -m config_finder stats
-python -m config_finder export
-python -m config_finder all
-```
-
-`discover` searches the configured public queries and adds resulting HTTP/HTTPS pages to `config/sources.txt`.
-
-`crawl` fetches those pages with bounded concurrency and extracts supported configuration links.
-
-`test` checks only the host/port advertised by collected configurations. It does not perform arbitrary port scanning.
-
-`top` ranks TCP-reachable configurations using the measured connection latency. The score is an operational heuristic, not a guarantee of proxy usability.
-
-`all` runs discovery, crawling, testing, and export.
+A window opens with Start Full Scan. Press that button and the application automatically searches public sources, collects subscription pages, extracts supported links, decodes supported Base64 subscriptions, removes duplicates, tests advertised endpoints, and exports the results.
 
 ## Output
 
-Generated under `data/`:
+- data/all.txt — every unique collected configuration
+- data/vless.txt
+- data/vmess.txt
+- data/trojan.txt
+- data/ss.txt
+- data/shadowsocks.txt
+- data/reachable.txt
+- data/unreachable.txt
+- data/summary.json
+- data/configs.db
 
-- `configs.db`
-- `all.txt`
-- `reachable.txt`
-- `unreachable.txt`
-- `vless.txt`
-- `vmess.txt`
-- `trojan.txt`
-- `ss.txt`
-- `shadowsocks.txt`
-- `summary.json`
+## Requirements
 
-## Development
+- Windows
+- Python 3.11+
+- Internet access
 
-Run the test suite:
+## Installation
 
-```powershell
-pytest -q
-```
+~~~powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -U pip
+python -m pip install -e .
+~~~
 
-GitHub Actions runs compilation and the test suite on pushes and pull requests.
+Then:
+
+~~~powershell
+py run.py
+~~~
+
+You do not need to use the CLI.
+
+## Discovery and scale
+
+Discovery uses multiple focused public search queries plus seeded public source lists. Crawling is asynchronous and bounded by concurrency, response size and timeout. The query list can be expanded without changing the application code.
+
+## Important interpretation
+
+reachable.txt means that the advertised TCP endpoint accepted a connection when tested. It does not prove that the proxy protocol, credentials, TLS settings, routing or authentication are valid in a real client.
 
 ## Operational limits
 
-Only public URLs explicitly configured or discovered through public search results are fetched. Crawling is bounded by request concurrency, response size, and timeout. Search requests are deliberately serialized with a delay. Endpoint testing is bounded by concurrency and timeout and is limited to endpoints extracted from collected public configuration links.
+Only public HTTP/HTTPS sources and public configuration links are processed. Endpoint testing is restricted to host/port values extracted from collected configurations. The project does not perform arbitrary port-range scanning, private-target discovery, credential harvesting, or access to private resources.
 
-No credential harvesting, private-target scanning, or arbitrary port-range scanning is implemented.
+## Development
+
+~~~powershell
+pytest -q
+~~~
