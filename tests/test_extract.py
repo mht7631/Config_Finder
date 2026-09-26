@@ -1,3 +1,5 @@
+import base64
+
 from config_finder.extract import extract_links
 
 
@@ -14,3 +16,11 @@ def test_extracts_multiple_protocols():
     text = "vless://a.example:443 vmess://YWJjZA== trojan://x@b.example:443"
     links = extract_links(text)
     assert len(links) == 3
+
+
+def test_extracts_base64_subscription():
+    payload = base64.b64encode(
+        b"vless://example.com:443?security=tls\nvless://other.example:443"
+    ).decode()
+    links = extract_links(payload)
+    assert len(links) == 2
