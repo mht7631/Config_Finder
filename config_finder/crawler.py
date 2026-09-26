@@ -83,10 +83,15 @@ class Crawler:
 
                     if depth < self.max_depth:
                         base = str(response.url)
+                        root_host = urlsplit(base).netloc.lower()
                         for anchor in soup.find_all("a", href=True):
                             target = urljoin(base, anchor.get("href", ""))
                             parts = urlsplit(target)
-                            if parts.scheme in ("http", "https") and parts.netloc:
+                            if (
+                                parts.scheme in ("http", "https")
+                                and parts.netloc
+                                and parts.netloc.lower() == root_host
+                            ):
                                 discovered.append(target.split("#", 1)[0])
                                 if len(discovered) >= self.max_links_per_page:
                                     break
